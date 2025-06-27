@@ -1,30 +1,36 @@
-import express from "express";
+const express = require("express");
+const chrono = require("chrono-node");
 
 const app = express();
 app.use(express.json());
 
 app.post("/webhook", (req, res) => {
-  console.log("Primljeni podaci iz Dialogflowa:", JSON.stringify(req.body, null, 2));
+  console.log("Dialogflow data:", req.body);
 
-  const params = req.body.queryResult?.parameters || {};
-  const date = params.date || "nepoznat datum";
-  const time = params.time || "nepoznato vrijeme";
+  const userQuery = req.body.queryResult.queryText;
 
-  // primjer provjere: sutra u 12 je zauzeto
-  if (date.includes("2025-06-28") && time.includes("12:00:00")) {
-    return res.json({
-      fulfillmentText: `Nažalost termin ${date} u ${time} je već zauzet. Molim odaberite drugi.`,
+  // koristimo chrono da parsiramo slobodni tekst
+  const parsedDate = chrono.parseDate(userQuery);
+
+  let responseText = "Nisam prepoznao datum i vrijeme.";
+
+  if (parsedDate) {
+    // formatiramo datum i vrijeme u čitljiv oblik
+    const dateString = parsedDate.toLocaleDateString("bs-BA");
+    const timeString = parsedDate.toLocaleTimeString("bs-BA", {
+      hour: "2-digit",
+      minute: "2-digit",
     });
+
+    responseText = `Termin je rezervisan za ${dateString} u ${timeString}.`;
   }
 
-  const responseText = `Rezervisano za ${date} u ${time}.`;
-
-  res.json({
+  return res.json({
     fulfillmentText: responseText,
   });
 });
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-  console.log(`Server radi na portu ${port}`);
+  console.log("Server running on port", port);
 });
